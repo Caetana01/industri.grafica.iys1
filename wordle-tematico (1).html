@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wordle temático</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink-bg: #1B3A3A;
+    --ink-bg-deep: #142B2B;
+    --paper: #F3ECD9;
+    --paper-dim: #E7DEC6;
+    --text-dark: #1E2420;
+    --text-light: #F3ECD9;
+    --correct: #4F7942;
+    --present: #C08A2E;
+    --absent: #6B6558;
+    --absent-dark: #33473F;
+    --accent: #C08A2E;
+    --danger: #A5453A;
+    --radius: 6px;
+  }
+  *{ box-sizing: border-box; }
+  html,body{ height: 100%; }
+  body{
+    margin: 0;
+    min-height: 100vh;
+    background: var(--ink-bg);
+    background-image:
+      radial-gradient(circle at 20% 10%, rgba(243,236,217,0.05), transparent 40%),
+      radial-gradient(circle at 85% 90%, rgba(243,236,217,0.04), transparent 45%);
+    color: var(--text-light);
+    font-family: 'Space Mono', monospace;
+    display: flex;
+    justify-content: center;
+    padding: 32px 16px 60px;
+  }
+  .app{
+    width: 100%;
+    max-width: 620px;
+  }
+  h1{
+    font-family: 'Fraunces', serif;
+    font-weight: 700;
+    font-size: clamp(1.9rem, 5vw, 2.6rem);
+    letter-spacing: -0.01em;
+    margin: 0 0 4px;
+    color: var(--paper);
+  }
+  .subtitle{
+    font-size: 0.92rem;
+    color: rgba(243,236,217,0.7);
+    margin: 0 0 28px;
+    line-height: 1.5;
+    max-width: 46ch;
+  }
+  .panel{
+    background: var(--paper);
+    color: var(--text-dark);
+    border-radius: var(--radius);
+    border: 2px solid var(--ink-bg-deep);
+    box-shadow: 6px 6px 0 rgba(20,43,43,0.55);
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+  .panel h2{
+    font-family: 'Fraunces', serif;
+    font-size: 1.15rem;
+    margin: 0 0 14px;
+    font-weight: 600;
+  }
+  label{
+    display: block;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 6px;
+    color: #4a4539;
+  }
+  .option-label{
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    text-transform: none;
+    letter-spacing: normal;
+    font-size: 0.85rem;
+    color: var(--text-dark);
+    cursor: pointer;
+    margin-bottom: 4px;
+  }
+  .option-label input{ margin-top: 3px; }
+  select{
+    width: 100%;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.95rem;
+    padding: 9px 10px;
+    border: 2px solid var(--ink-bg);
+    border-radius: 4px;
+    background: #fffdf6;
+    color: var(--text-dark);
+  }
+  input[type="text"], input[type="number"], textarea{
+    width: 100%;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.95rem;
+    padding: 9px 10px;
+    border: 2px solid var(--ink-bg);
+    border-radius: 4px;
+    background: #fffdf6;
+    color: var(--text-dark);
+  }
+  input:focus, textarea:focus, button:focus-visible{
+    outline: 3px solid var(--accent);
+    outline-offset: 1px;
+  }
+  .field{ margin-bottom: 14px; }
+  .row{
+    display: flex;
+    gap: 12px;
+  }
+  .row > .field{ flex: 1; }
+  button{
+    font-family: 'Space Mono', monospace;
+    font-weight: 700;
+    font-size: 0.9rem;
+    letter-spacing: 0.02em;
+    border: 2px solid var(--ink-bg-deep);
+    border-radius: 4px;
+    padding: 10px 16px;
+    cursor: pointer;
+    background: var(--paper);
+    color: var(--text-dark);
+    transition: transform 0.08s ease;
+  }
+  button:active{ transform: translateY(2px); }
+  button.primary{
+    background: var(--accent);
+    color: #201705;
+    border-color: #7a5b16;
+  }
+  button.danger{
+    background: transparent;
+    color: var(--danger);
+    border-color: var(--danger);
+    padding: 6px 10px;
+    font-size: 0.78rem;
+  }
+  button.ghost{
+    background: transparent;
+    border-color: var(--ink-bg);
+  }
+  button:disabled{
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+  .word-list{
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 18px;
+    max-height: 260px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+  .word-item{
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    background: #fffdf6;
+    border: 1px solid #cfc6ab;
+    border-radius: 4px;
+    padding: 10px 12px;
+  }
+  .word-item .txt strong{
+    font-family: 'Fraunces', serif;
+    letter-spacing: 0.04em;
+    font-size: 1rem;
+  }
+  .word-item .txt p{
+    margin: 4px 0 0;
+    font-size: 0.82rem;
+    color: #4a4539;
+    line-height: 1.4;
+  }
+  .word-item .len-tag{
+    font-size: 0.68rem;
+    background: var(--ink-bg);
+    color: var(--paper);
+    padding: 1px 6px;
+    border-radius: 3px;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+  .add-form{
+    border-top: 1px dashed #b9ae8e;
+    padding-top: 16px;
+  }
+  .status-line{
+    font-size: 0.82rem;
+    margin: 10px 0 16px;
+    color: #4a4539;
+  }
+  .status-line.warn{ color: var(--danger); font-weight: 700; }
+
+  /* --- Juego --- */
+  .board{
+    display: grid;
+    gap: 6px;
+    justify-content: center;
+    margin: 8px auto 22px;
+  }
+  .board-row{
+    display: grid;
+    gap: 6px;
+    grid-auto-flow: column;
+  }
+  .tile{
+    width: 46px;
+    height: 46px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Space Mono', monospace;
+    font-weight: 700;
+    font-size: 1.3rem;
+    border: 2px solid rgba(243,236,217,0.25);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--paper);
+    text-transform: uppercase;
+  }
+  .tile.filled{ border-color: rgba(243,236,217,0.55); }
+  .tile.correct{ background: var(--correct); border-color: var(--correct); color: #fff; }
+  .tile.present{ background: var(--present); border-color: var(--present); color: #201705; }
+  .tile.absent{ background: var(--absent-dark); border-color: var(--absent-dark); color: rgba(243,236,217,0.6); }
+
+  .keyboard{
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: center;
+    margin-top: 10px;
+  }
+  .kb-row{ display: flex; gap: 5px; }
+  .key{
+    font-family: 'Space Mono', monospace;
+    font-weight: 700;
+    font-size: 0.78rem;
+    border: none;
+    border-radius: 4px;
+    background: rgba(243,236,217,0.18);
+    color: var(--paper);
+    padding: 12px 8px;
+    min-width: 30px;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+  .key.wide{ min-width: 52px; font-size: 0.65rem; padding: 12px 6px;}
+  .key.correct{ background: var(--correct); color: #fff; }
+  .key.present{ background: var(--present); color: #201705; }
+  .key.absent{ background: rgba(60,60,55,0.5); color: rgba(243,236,217,0.4); }
+
+  .msg{
+    text-align: center;
+    min-height: 24px;
+    font-size: 0.85rem;
+    margin-bottom: 6px;
+    color: var(--paper);
+  }
+  .top-bar{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+  }
+  .top-bar .meta{
+    font-size: 0.78rem;
+    color: rgba(243,236,217,0.65);
+  }
+  .end-card{
+    background: var(--paper);
+    color: var(--text-dark);
+    border-radius: var(--radius);
+    border: 2px solid var(--ink-bg-deep);
+    box-shadow: 6px 6px 0 rgba(20,43,43,0.55);
+    padding: 20px;
+    text-align: center;
+    margin-top: 6px;
+  }
+  .end-card h3{
+    font-family: 'Fraunces', serif;
+    margin: 0 0 6px;
+    font-size: 1.2rem;
+  }
+  .end-card p{
+    font-size: 0.88rem;
+    line-height: 1.5;
+    margin: 6px 0 16px;
+  }
+  .end-actions{
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .hidden{ display: none !important; }
+  ::-webkit-scrollbar{ width: 8px; }
+  ::-webkit-scrollbar-thumb{ background: #cfc6ab; border-radius: 4px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>Wordle temático</h1>
+  <p class="subtitle">Armá tu propio mazo de palabras con definiciones, elegí el largo y jugá. Cada partida sortea una palabra al azar de esa longitud.</p>
+
+  <!-- PANTALLA DE CONFIGURACIÓN -->
+  <div id="config-screen">
+    <div class="panel">
+      <h2>Elegí el tamaño de la palabra</h2>
+      <div class="field">
+        <label for="length-input">Cantidad de letras</label>
+        <input type="number" id="length-input" min="2" max="15" value="7">
+      </div>
+      <div class="status-line" id="length-status"></div>
+      <button class="primary" id="play-btn">Jugar</button>
+    </div>
+
+    <div class="panel" id="share-panel">
+      <h2>Compartir con jugadores</h2>
+      <p class="status-line" style="margin-top:-6px;">Genera un enlace que abre directo el tablero de juego. Quien lo abra no ve esta configuración ni puede editar las palabras.</p>
+      <div class="field">
+        <label class="option-label"><input type="radio" name="share-mode" value="random" checked> Cada jugador recibe una palabra al azar (de la longitud elegida arriba)</label>
+        <label class="option-label"><input type="radio" name="share-mode" value="fixed"> Todos juegan la misma palabra</label>
+      </div>
+      <div class="field hidden" id="fixed-word-field">
+        <label for="fixed-word-select">Elegí cuál</label>
+        <select id="fixed-word-select"></select>
+      </div>
+      <button class="primary" id="generate-link-btn" type="button">Generar enlace</button>
+      <div class="field hidden" id="link-output-field" style="margin-top:14px;">
+        <label>Enlace para compartir</label>
+        <div class="row">
+          <input type="text" id="link-output" readonly>
+          <button class="ghost" id="copy-link-btn" type="button" style="white-space:nowrap;">Copiar</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Banco de palabras</h2>
+      <div class="word-list" id="word-list"></div>
+
+      <div class="add-form">
+        <div class="field">
+          <label for="new-word">Palabra</label>
+          <input type="text" id="new-word" placeholder="Ej: GALAXIA">
+        </div>
+        <div class="field">
+          <label for="new-def">Definición</label>
+          <textarea id="new-def" rows="2" placeholder="Qué significa esta palabra"></textarea>
+        </div>
+        <div class="row" id="form-error-row" style="display:none;">
+          <p class="status-line warn" id="form-error"></p>
+        </div>
+        <button class="ghost" id="add-word-btn" type="button">+ Agregar palabra</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PANTALLA DE JUEGO -->
+  <div id="game-screen" class="hidden">
+    <div class="top-bar">
+      <button class="ghost" id="back-btn">← Editar palabras</button>
+      <span class="meta" id="attempts-meta"></span>
+    </div>
+    <div class="msg" id="msg"></div>
+    <div class="board" id="board"></div>
+    <div class="keyboard" id="keyboard"></div>
+
+    <div class="end-card hidden" id="end-card">
+      <h3 id="end-title"></h3>
+      <p id="end-def"></p>
+      <div class="end-actions">
+        <button class="primary" id="play-again-btn">Jugar de nuevo</button>
+        <button class="ghost" id="edit-again-btn">Editar palabras</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+
+  // ---------- Estado ----------
+  let words = [
+    { word: "ESTRELLA", def: "Cuerpo celeste que produce luz propia mediante reacciones nucleares." },
+    { word: "GALAXIA",  def: "Conjunto de estrellas, gas y polvo unidos por la gravedad." },
+    { word: "PLANETA",  def: "Cuerpo celeste que orbita una estrella y no emite luz propia." },
+    { word: "METEORO",  def: "Fragmento de roca que se desintegra al entrar en la atmósfera." },
+    { word: "COMETA",   def: "Cuerpo helado que al acercarse al Sol libera una cola de gas y polvo." },
+    { word: "NEBULOSA", def: "Nube de gas y polvo interestelar donde pueden nacer estrellas." }
+  ];
+
+  let currentAnswer = "";
+  let currentDef = "";
+  let currentLength = 7;
+  let maxAttempts = 6;
+  let guesses = [];
+  let currentGuess = "";
+  let gameOver = false;
+  let keyStates = {};
+
+  const KB_ROWS = [
+    ["Q","W","E","R","T","Y","U","I","O","P"],
+    ["A","S","D","F","G","H","J","K","L","Ñ"],
+    ["ENTER","Z","X","C","V","B","N","M","⌫"]
+  ];
+
+  // ---------- Utilidades ----------
+  function normalize(str){
+    return str.toUpperCase()
+      .replace(/Ñ/g, "\u0001")
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .replace(/\u0001/g, "Ñ");
+  }
+
+  function wordLength(w){ return normalize(w).length; }
+
+  function wordsOfLength(len){
+    return words.filter(w => wordLength(w.word) === len);
+  }
+
+  // ---------- Config screen: render ----------
+  const lengthInput = document.getElementById("length-input");
+  const lengthStatus = document.getElementById("length-status");
+  const playBtn = document.getElementById("play-btn");
+  const wordListEl = document.getElementById("word-list");
+  const newWordEl = document.getElementById("new-word");
+  const newDefEl = document.getElementById("new-def");
+  const addWordBtn = document.getElementById("add-word-btn");
+  const formErrorRow = document.getElementById("form-error-row");
+  const formError = document.getElementById("form-error");
+
+  function renderWordList(){
+    wordListEl.innerHTML = "";
+    if(words.length === 0){
+      wordListEl.innerHTML = '<p class="status-line">Todavía no agregaste palabras.</p>';
+    }
+    words.forEach((w, idx) => {
+      const item = document.createElement("div");
+      item.className = "word-item";
+      item.innerHTML = `
+        <div class="txt">
+          <strong>${w.word.toUpperCase()}</strong><span class="len-tag">${wordLength(w.word)} letras</span>
+          <p>${w.def ? w.def : "(sin definición)"}</p>
+        </div>
+        <button class="danger" data-idx="${idx}" type="button">Quitar</button>
+      `;
+      item.querySelector("button").addEventListener("click", () => {
+        words.splice(idx, 1);
+        renderWordList();
+        updateLengthStatus();
+      });
+      wordListEl.appendChild(item);
+    });
+  }
+
+  function updateLengthStatus(){
+    const len = parseInt(lengthInput.value, 10);
+    currentLength = len;
+    const matches = wordsOfLength(len);
+    if(!len || len < 2){
+      lengthStatus.textContent = "Elegí un largo de palabra válido.";
+      lengthStatus.classList.add("warn");
+      playBtn.disabled = true;
+      return;
+    }
+    if(matches.length === 0){
+      lengthStatus.textContent = `No hay palabras de ${len} letras en tu banco. Agregá una o cambiá el largo.`;
+      lengthStatus.classList.add("warn");
+      playBtn.disabled = true;
+    } else {
+      lengthStatus.textContent = `${matches.length} palabra(s) disponible(s) de ${len} letras.`;
+      lengthStatus.classList.remove("warn");
+      playBtn.disabled = false;
+    }
+  }
+
+  lengthInput.addEventListener("input", updateLengthStatus);
+
+  addWordBtn.addEventListener("click", () => {
+    const w = newWordEl.value.trim();
+    const d = newDefEl.value.trim();
+    formErrorRow.style.display = "none";
+    if(!w || !/^[a-zA-ZñÑáéíóúÁÉÍÓÚüÜ]+$/.test(w)){
+      formError.textContent = "Escribí una palabra válida (solo letras).";
+      formErrorRow.style.display = "flex";
+      return;
+    }
+    words.push({ word: w.toUpperCase(), def: d });
+    newWordEl.value = "";
+    newDefEl.value = "";
+    renderWordList();
+    updateLengthStatus();
+  });
+
+  playBtn.addEventListener("click", startGame);
+
+  // ---------- Juego: render ----------
+  const configScreen = document.getElementById("config-screen");
+  const gameScreen = document.getElementById("game-screen");
+  const boardEl = document.getElementById("board");
+  const keyboardEl = document.getElementById("keyboard");
+  const msgEl = document.getElementById("msg");
+  const attemptsMeta = document.getElementById("attempts-meta");
+  const backBtn = document.getElementById("back-btn");
+  const endCard = document.getElementById("end-card");
+  const endTitle = document.getElementById("end-title");
+  const endDef = document.getElementById("end-def");
+  const playAgainBtn = document.getElementById("play-again-btn");
+  const editAgainBtn = document.getElementById("edit-again-btn");
+
+  let activeFixedIndex = null;
+
+  function startGame(fixedIndex){
+    const pool = wordsOfLength(currentLength);
+    if(pool.length === 0) return;
+    activeFixedIndex = (typeof fixedIndex === "number") ? fixedIndex : null;
+    const pick = (activeFixedIndex !== null && words[activeFixedIndex])
+      ? words[activeFixedIndex]
+      : pool[Math.floor(Math.random() * pool.length)];
+    currentAnswer = normalize(pick.word);
+    currentDef = pick.def;
+    maxAttempts = Math.max(6, currentLength + 1);
+    guesses = [];
+    currentGuess = "";
+    gameOver = false;
+    keyStates = {};
+
+    configScreen.classList.add("hidden");
+    gameScreen.classList.remove("hidden");
+    endCard.classList.add("hidden");
+    msgEl.textContent = "";
+    attemptsMeta.textContent = `${currentLength} letras · ${maxAttempts} intentos`;
+
+    buildBoard();
+    buildKeyboard();
+    renderBoard();
+  }
+
+  function buildBoard(){
+    boardEl.innerHTML = "";
+    boardEl.style.gridTemplateRows = `repeat(${maxAttempts}, 46px)`;
+    for(let r = 0; r < maxAttempts; r++){
+      const row = document.createElement("div");
+      row.className = "board-row";
+      row.style.gridTemplateColumns = `repeat(${currentLength}, 46px)`;
+      for(let c = 0; c < currentLength; c++){
+        const tile = document.createElement("div");
+        tile.className = "tile";
+        tile.id = `tile-${r}-${c}`;
+        row.appendChild(tile);
+      }
+      boardEl.appendChild(row);
+    }
+  }
+
+  function buildKeyboard(){
+    keyboardEl.innerHTML = "";
+    KB_ROWS.forEach(rowKeys => {
+      const row = document.createElement("div");
+      row.className = "kb-row";
+      rowKeys.forEach(k => {
+        const btn = document.createElement("button");
+        btn.className = "key" + (k === "ENTER" || k === "⌫" ? " wide" : "");
+        btn.textContent = k === "ENTER" ? "Enter" : k;
+        btn.dataset.key = k;
+        btn.addEventListener("click", () => handleKey(k));
+        row.appendChild(btn);
+      });
+      keyboardEl.appendChild(row);
+    });
+  }
+
+  function renderBoard(){
+    guesses.forEach((g, r) => {
+      for(let c = 0; c < currentLength; c++){
+        const tile = document.getElementById(`tile-${r}-${c}`);
+        tile.textContent = g.letters[c];
+        tile.classList.add("filled", g.states[c]);
+      }
+    });
+    const activeRow = guesses.length;
+    if(activeRow < maxAttempts){
+      for(let c = 0; c < currentLength; c++){
+        const tile = document.getElementById(`tile-${activeRow}-${c}`);
+        tile.textContent = currentGuess[c] || "";
+        tile.classList.toggle("filled", !!currentGuess[c]);
+      }
+    }
+    document.querySelectorAll(".key").forEach(btn => {
+      const k = btn.dataset.key;
+      btn.classList.remove("correct", "present", "absent");
+      if(keyStates[k]) btn.classList.add(keyStates[k]);
+    });
+  }
+
+  function evaluateGuess(guess, answer){
+    const len = answer.length;
+    const result = new Array(len).fill("absent");
+    const answerArr = answer.split("");
+    const guessArr = guess.split("");
+
+    for(let i = 0; i < len; i++){
+      if(guessArr[i] === answerArr[i]){
+        result[i] = "correct";
+        answerArr[i] = null;
+        guessArr[i] = null;
+      }
+    }
+    for(let i = 0; i < len; i++){
+      if(guessArr[i] === null) continue;
+      const idx = answerArr.indexOf(guessArr[i]);
+      if(idx > -1){
+        result[i] = "present";
+        answerArr[idx] = null;
+      }
+    }
+    return result;
+  }
+
+  function updateKeyStates(letters, states){
+    const rank = { absent: 0, present: 1, correct: 2 };
+    letters.forEach((l, i) => {
+      const st = states[i];
+      if(!keyStates[l] || rank[st] > rank[keyStates[l]]){
+        keyStates[l] = st;
+      }
+    });
+  }
+
+  function showMsg(text, timeout){
+    msgEl.textContent = text;
+    if(timeout){
+      setTimeout(() => { if(msgEl.textContent === text) msgEl.textContent = ""; }, timeout);
+    }
+  }
+
+  function handleKey(k){
+    if(gameOver) return;
+    if(k === "ENTER"){
+      submitGuess();
+    } else if(k === "⌫"){
+      currentGuess = currentGuess.slice(0, -1);
+      renderBoard();
+    } else if(/^[A-ZÑ]$/.test(k)){
+      if(currentGuess.length < currentLength){
+        currentGuess += k;
+        renderBoard();
+      }
+    }
+  }
+
+  function submitGuess(){
+    if(currentGuess.length !== currentLength){
+      showMsg(`La palabra debe tener ${currentLength} letras.`, 1600);
+      return;
+    }
+    const states = evaluateGuess(currentGuess, currentAnswer);
+    const letters = currentGuess.split("");
+    guesses.push({ letters, states });
+    updateKeyStates(letters, states);
+
+    const won = states.every(s => s === "correct");
+    currentGuess = "";
+    renderBoard();
+
+    if(won){
+      gameOver = true;
+      showEnd(true);
+    } else if(guesses.length >= maxAttempts){
+      gameOver = true;
+      showEnd(false);
+    }
+  }
+
+  function showEnd(won){
+    endCard.classList.remove("hidden");
+    endTitle.textContent = won
+      ? "¡Adivinaste la palabra!"
+      : `Se acabaron los intentos. Era "${currentAnswer}"`;
+    endDef.textContent = currentDef ? currentDef : "(esta palabra no tiene definición cargada)";
+  }
+
+  document.addEventListener("keydown", (e) => {
+    if(gameScreen.classList.contains("hidden") || gameOver) return;
+    const k = e.key.toUpperCase();
+    if(k === "ENTER") return handleKey("ENTER");
+    if(k === "BACKSPACE") return handleKey("⌫");
+    if(/^[A-ZÑ]$/.test(k)) return handleKey(k);
+  });
+
+  function goToConfig(){
+    gameScreen.classList.add("hidden");
+    configScreen.classList.remove("hidden");
+    renderWordList();
+    updateLengthStatus();
+  }
+
+  backBtn.addEventListener("click", goToConfig);
+  editAgainBtn.addEventListener("click", goToConfig);
+  playAgainBtn.addEventListener("click", () => startGame(activeFixedIndex));
+
+  // ---------- Compartir enlace ----------
+  const fixedWordField = document.getElementById("fixed-word-field");
+  const fixedWordSelect = document.getElementById("fixed-word-select");
+  const generateLinkBtn = document.getElementById("generate-link-btn");
+  const linkOutputField = document.getElementById("link-output-field");
+  const linkOutput = document.getElementById("link-output");
+  const copyLinkBtn = document.getElementById("copy-link-btn");
+
+  document.querySelectorAll('input[name="share-mode"]').forEach(r => {
+    r.addEventListener("change", () => {
+      const mode = document.querySelector('input[name="share-mode"]:checked').value;
+      fixedWordField.classList.toggle("hidden", mode !== "fixed");
+      if(mode === "fixed") populateFixedWordSelect();
+    });
+  });
+
+  function populateFixedWordSelect(){
+    fixedWordSelect.innerHTML = "";
+    const len = parseInt(lengthInput.value, 10);
+    wordsOfLength(len).forEach(w => {
+      const opt = document.createElement("option");
+      opt.value = w.word;
+      opt.textContent = w.word.toUpperCase();
+      fixedWordSelect.appendChild(opt);
+    });
+  }
+
+  function encodeShareData(data){
+    return encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(data)))));
+  }
+  function decodeShareData(str){
+    return JSON.parse(decodeURIComponent(escape(atob(decodeURIComponent(str)))));
+  }
+
+  generateLinkBtn.addEventListener("click", () => {
+    const len = parseInt(lengthInput.value, 10);
+    const pool = wordsOfLength(len);
+    if(!len || pool.length === 0){
+      alert("Elegí un largo de palabra que tenga al menos una palabra disponible antes de generar el enlace.");
+      return;
+    }
+    const mode = document.querySelector('input[name="share-mode"]:checked').value;
+    const data = { w: pool.map(p => ({ w: p.word, d: p.def })), len: len };
+    if(mode === "fixed"){
+      const chosenWord = fixedWordSelect.value;
+      const idx = data.w.findIndex(p => p.w === chosenWord);
+      data.fixedIdx = idx > -1 ? idx : 0;
+    }
+    const encoded = encodeShareData(data);
+    const url = `${location.origin}${location.pathname}?j=${encoded}`;
+    linkOutput.value = url;
+    linkOutputField.classList.remove("hidden");
+    linkOutput.focus();
+    linkOutput.select();
+  });
+
+  copyLinkBtn.addEventListener("click", () => {
+    linkOutput.select();
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(linkOutput.value).catch(() => {});
+    } else {
+      try{ document.execCommand("copy"); }catch(e){}
+    }
+    const original = copyLinkBtn.textContent;
+    copyLinkBtn.textContent = "¡Copiado!";
+    setTimeout(() => { copyLinkBtn.textContent = original; }, 1500);
+  });
+
+  // ---------- Modo invitado (quien recibe el enlace) ----------
+  function tryGuestMode(){
+    const params = new URLSearchParams(location.search);
+    const j = params.get("j");
+    if(!j) return false;
+    try{
+      const data = decodeShareData(j);
+      if(!data || !Array.isArray(data.w) || !data.len) return false;
+      words = data.w.map(x => ({ word: x.w, def: x.d }));
+      currentLength = data.len;
+      backBtn.classList.add("hidden");
+      editAgainBtn.classList.add("hidden");
+      configScreen.classList.add("hidden");
+      gameScreen.classList.remove("hidden");
+      startGame(typeof data.fixedIdx === "number" ? data.fixedIdx : undefined);
+      return true;
+    }catch(e){
+      return false;
+    }
+  }
+
+  // ---------- Init ----------
+  if(!tryGuestMode()){
+    renderWordList();
+    updateLengthStatus();
+  }
+})();
+</script>
+</body>
+</html>
